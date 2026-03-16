@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Melodify – Web Music Player</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --card: #1a1a26;
+    --accent: #ff3cac;
+    --accent2: #784ba0;
+    --accent3: #2b86c5;
+    --text: #f0f0ff;
+    --muted: #6b6b8a;
+    --glow: rgba(255,60,172,0.35);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  body::before {
+    content:'';
+    position:fixed; inset:0;
+    background: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(120,75,160,0.4) 0%, transparent 70%),
+                radial-gradient(ellipse 60% 50% at 80% 100%, rgba(43,134,197,0.25) 0%, transparent 70%);
+    pointer-events:none;
+  }
+  .app {
+    width: 420px;
+    background: var(--surface);
+    border-radius: 28px;
+    border: 1px solid rgba(255,255,255,0.07);
+    box-shadow: 0 40px 80px rgba(0,0,0,0.6), 0 0 60px var(--glow);
+    overflow: hidden;
+    position: relative;
+    z-index: 1;
+  }
+  /* Header */
+  .header {
+    padding: 28px 28px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2rem;
+    letter-spacing: 3px;
+    background: linear-gradient(135deg, var(--accent), var(--accent3));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .header span { color: var(--muted); font-size: 0.8rem; }
+
+  /* Now Playing */
+  .now-playing {
+    padding: 28px;
+    text-align: center;
+  }
+  .album-art {
+    width: 200px; height: 200px;
+    border-radius: 50%;
+    margin: 0 auto 24px;
+    position: relative;
+    background: linear-gradient(135deg, #ff3cac, #784ba0, #2b86c5);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 4rem;
+    box-shadow: 0 0 60px var(--glow), 0 20px 40px rgba(0,0,0,0.5);
+    animation: spin 12s linear infinite;
+    animation-play-state: paused;
+    cursor: pointer;
+  }
+  .album-art.playing { animation-play-state: running; }
+  .album-art::after {
+    content:'';
+    position:absolute; inset:30%;
+    background: var(--surface);
+    border-radius: 50%;
+    box-shadow: inset 0 2px 8px rgba(0,0,0,0.5);
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .track-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.8rem;
+    letter-spacing: 2px;
+    margin-bottom: 4px;
+  }
+  .track-artist { color: var(--muted); font-size: 0.9rem; font-weight: 500; }
+
+  /* Progress */
+  .progress-wrap {
+    padding: 20px 28px 0;
+  }
+  .progress-bar {
+    width: 100%; height: 4px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 99px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent3));
+    border-radius: 99px;
+    width: 35%;
+    transition: width 0.1s;
+    position: relative;
+  }
+  .progress-fill::after {
+    content:'';
+    position:absolute; right:-4px; top:50%;
+    transform:translateY(-50%);
+    width:10px; height:10px;
+    background:#fff;
+    border-radius:50%;
+    box-shadow: 0 0 8px var(--glow);
+  }
+  .time-row {
+    display: flex; justify-content: space-between;
+    margin-top: 8px; color: var(--muted); font-size: 0.78rem;
+  }
+
+  /* Controls */
+  .controls {
+    display: flex; align-items: center; justify-content: center;
+    gap: 20px; padding: 24px 28px;
+  }
+  .ctrl-btn {
+    background: none; border: none; color: var(--muted);
+    cursor: pointer; font-size: 1.3rem;
+    transition: color 0.2s, transform 0.15s;
+    display: flex; align-items: center; justify-content: center;
+    width: 42px; height: 42px; border-radius: 50%;
+  }
+  .ctrl-btn:hover { color: var(--text); transform: scale(1.15); }
+  .play-btn {
+    width: 62px; height: 62px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff; font-size: 1.6rem;
+    border-radius: 50%;
+    box-shadow: 0 8px 30px var(--glow);
+    transition: transform 0.15s, box-shadow 0.2s;
+  }
+  .play-btn:hover { transform: scale(1.08); box-shadow: 0 12px 40px var(--glow); }
+
+  /* Volume */
+  .volume-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 0 28px 20px;
+  }
+  .volume-row span { color: var(--muted); font-size: 1rem; }
+  input[type=range] {
+    flex:1; -webkit-appearance:none; height:4px;
+    background: rgba(255,255,255,0.1); border-radius:99px; cursor:pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance:none; width:14px; height:14px;
+    background: var(--accent); border-radius:50%;
+    box-shadow: 0 0 8px var(--glow);
+  }
+
+  /* Playlist */
+  .playlist { padding: 0 16px 20px; }
+  .playlist-title {
+    font-size: 0.7rem; letter-spacing: 3px; color: var(--muted);
+    text-transform: uppercase; padding: 0 12px 12px;
+  }
+  .song {
+    display: flex; align-items: center; gap: 14px;
+    padding: 12px; border-radius: 14px; cursor: pointer;
+    transition: background 0.2s;
+  }
+  .song:hover, .song.active { background: var(--card); }
+  .song.active .song-num { color: var(--accent); }
+  .song-num { color: var(--muted); font-size: 0.8rem; width: 18px; text-align:center; }
+  .song-icon {
+    width: 42px; height: 42px; border-radius: 10px;
+    display: flex; align-items:center; justify-content:center; font-size:1.3rem;
+    flex-shrink: 0;
+  }
+  .song-info { flex:1; }
+  .song-name { font-size: 0.9rem; font-weight: 500; margin-bottom: 2px; }
+  .song-artist { font-size: 0.75rem; color: var(--muted); }
+  .song-dur { font-size: 0.78rem; color: var(--muted); }
+  .song.active .song-num::before { content:'▶'; }
+  .equalizer {
+    display: none; gap: 2px; align-items: flex-end; height: 18px;
+  }
+  .song.active .equalizer { display: flex; }
+  .song.active .song-num-txt { display: none; }
+  .eq-bar {
+    width: 3px; background: var(--accent); border-radius: 2px;
+    animation: eq 0.8s ease-in-out infinite alternate;
+  }
+  .eq-bar:nth-child(2) { animation-delay: 0.2s; }
+  .eq-bar:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes eq {
+    from { height: 4px; }
+    to { height: 16px; }
+  }
+
+  /* Divider */
+  .divider { height:1px; background: rgba(255,255,255,0.05); margin: 0 16px 16px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="logo">MELODIFY</div>
+    <span>NOW PLAYING</span>
+  </div>
+
+  <div class="now-playing">
+    <div class="album-art playing" id="albumArt">🎵</div>
+    <div class="track-title" id="trackTitle">BLINDING LIGHTS</div>
+    <div class="track-artist" id="trackArtist">The Weeknd</div>
+  </div>
+
+  <div class="progress-wrap">
+    <div class="progress-bar" id="progressBar">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+    <div class="time-row">
+      <span id="currentTime">1:24</span>
+      <span id="totalTime">3:20</span>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="ctrl-btn" onclick="prevSong()">⏮</button>
+    <button class="ctrl-btn" style="font-size:1rem">🔀</button>
+    <button class="ctrl-btn play-btn" id="playBtn" onclick="togglePlay()">▶</button>
+    <button class="ctrl-btn" style="font-size:1rem">🔁</button>
+    <button class="ctrl-btn" onclick="nextSong()">⏭</button>
+  </div>
+
+  <div class="volume-row">
+    <span>🔈</span>
+    <input type="range" min="0" max="100" value="70" oninput="this.style.background=`linear-gradient(90deg, #ff3cac ${this.value}%, rgba(255,255,255,0.1) ${this.value}%)`" style="background: linear-gradient(90deg,#ff3cac 70%,rgba(255,255,255,0.1) 70%)">
+    <span>🔊</span>
+  </div>
+
+  <div class="divider"></div>
+  <div class="playlist">
+    <div class="playlist-title">Playlist — 5 Songs</div>
+    <div class="song active" onclick="selectSong(0)">
+      <div class="song-num">
+        <span class="song-num-txt">1</span>
+        <div class="equalizer"><div class="eq-bar" style="height:10px"></div><div class="eq-bar" style="height:6px"></div><div class="eq-bar" style="height:14px"></div></div>
+      </div>
+      <div class="song-icon" style="background:linear-gradient(135deg,#ff3cac,#784ba0)">🌙</div>
+      <div class="song-info">
+        <div class="song-name">Blinding Lights</div>
+        <div class="song-artist">The Weeknd</div>
+      </div>
+      <div class="song-dur">3:20</div>
+    </div>
+    <div class="song" onclick="selectSong(1)">
+      <div class="song-num"><span class="song-num-txt">2</span></div>
+      <div class="song-icon" style="background:linear-gradient(135deg,#2b86c5,#784ba0)">🎸</div>
+      <div class="song-info">
+        <div class="song-name">Levitating</div>
+        <div class="song-artist">Dua Lipa</div>
+      </div>
+      <div class="song-dur">3:23</div>
+    </div>
+    <div class="song" onclick="selectSong(2)">
+      <div class="song-num"><span class="song-num-txt">3</span></div>
+      <div class="song-icon" style="background:linear-gradient(135deg,#f7971e,#ffd200)">🎤</div>
+      <div class="song-info">
+        <div class="song-name">Watermelon Sugar</div>
+        <div class="song-artist">Harry Styles</div>
+      </div>
+      <div class="song-dur">2:54</div>
+    </div>
+    <div class="song" onclick="selectSong(3)">
+      <div class="song-num"><span class="song-num-txt">4</span></div>
+      <div class="song-icon" style="background:linear-gradient(135deg,#11998e,#38ef7d)">🎹</div>
+      <div class="song-info">
+        <div class="song-name">Stay</div>
+        <div class="song-artist">The Kid LAROI, Justin Bieber</div>
+      </div>
+      <div class="song-dur">2:21</div>
+    </div>
+    <div class="song" onclick="selectSong(4)">
+      <div class="song-num"><span class="song-num-txt">5</span></div>
+      <div class="song-icon" style="background:linear-gradient(135deg,#ee0979,#ff6a00)">🔥</div>
+      <div class="song-info">
+        <div class="song-name">As It Was</div>
+        <div class="song-artist">Harry Styles</div>
+      </div>
+      <div class="song-dur">2:37</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const songs = [
+    { title: 'BLINDING LIGHTS', artist: 'The Weeknd', dur: '3:20', icon: '🌙', grad: 'linear-gradient(135deg,#ff3cac,#784ba0)' },
+    { title: 'LEVITATING', artist: 'Dua Lipa', dur: '3:23', icon: '🎸', grad: 'linear-gradient(135deg,#2b86c5,#784ba0)' },
+    { title: 'WATERMELON SUGAR', artist: 'Harry Styles', dur: '2:54', icon: '🎤', grad: 'linear-gradient(135deg,#f7971e,#ffd200)' },
+    { title: 'STAY', artist: 'The Kid LAROI', dur: '2:21', icon: '🎹', grad: 'linear-gradient(135deg,#11998e,#38ef7d)' },
+    { title: 'AS IT WAS', artist: 'Harry Styles', dur: '2:37', icon: '🔥', grad: 'linear-gradient(135deg,#ee0979,#ff6a00)' },
+  ];
+  let current = 0, playing = true, progress = 35;
+  let timer;
+
+  function selectSong(i) {
+    current = i;
+    document.querySelectorAll('.song').forEach((s,j) => s.classList.toggle('active', j===i));
+    document.getElementById('trackTitle').textContent = songs[i].title;
+    document.getElementById('trackArtist').textContent = songs[i].artist;
+    document.getElementById('totalTime').textContent = songs[i].dur;
+    document.getElementById('albumArt').textContent = songs[i].icon;
+    document.getElementById('albumArt').style.background = songs[i].grad;
+    progress = 0;
+    updateProgress();
+    if (!playing) togglePlay();
+  }
+  function togglePlay() {
+    playing = !playing;
+    document.getElementById('playBtn').textContent = playing ? '⏸' : '▶';
+    document.getElementById('albumArt').classList.toggle('playing', playing);
+    if (playing) startProgress(); else clearInterval(timer);
+  }
+  function startProgress() {
+    clearInterval(timer);
+    timer = setInterval(() => {
+      progress = Math.min(progress + 0.3, 100);
+      updateProgress();
+      if (progress >= 100) nextSong();
+    }, 200);
+  }
+  function updateProgress() {
+    document.getElementById('progressFill').style.width = progress + '%';
+    const total = parseDur(songs[current].dur);
+    const cur = Math.round((progress/100) * total);
+    document.getElementById('currentTime').textContent = formatTime(cur);
+  }
+  function parseDur(d) { const [m,s]=d.split(':'); return +m*60+ +s; }
+  function formatTime(s) { return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`; }
+  function nextSong() { selectSong((current+1)%songs.length); }
+  function prevSong() { selectSong((current-1+songs.length)%songs.length); }
+
+  document.getElementById('progressBar').addEventListener('click', e => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    progress = ((e.clientX - rect.left) / rect.width) * 100;
+    updateProgress();
+  });
+  if (playing) startProgress();
+</script>
+</body>
+</html>
